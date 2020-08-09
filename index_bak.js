@@ -65,6 +65,15 @@ function startRecord(roomId) {
     })
 }
 
+function stopRecord(){
+    //Since SIGNAL is not supported, the following line is commented.
+    //proc.kill("SIGTERM");
+    proc.stdin.setEncoding('utf-8')
+    proc.stdin.write("stop")
+    proc.stdin.end()
+    proc = null
+}
+
 const danmuClient = new huya_danmu("lovetuleisi")
 //初始化弹幕模块，用来监听是否开播和下播
 danmuClient.on('message', msg => {
@@ -150,12 +159,7 @@ app.get("/stop", function (req, res) {
         return;
     }
     earlyTerminated = true;
-    //Since SIGNAL is not supported, the following line is commented.
-    //proc.kill("SIGTERM");
-    proc.stdin.setEncoding('utf-8')
-    proc.stdin.write("stop")
-    proc.stdin.end()
-    proc = null
+    stopRecord()
     res.send("OK")
 })
 
@@ -180,6 +184,21 @@ app.get("/getLatestChatInfos", function (req, res) {
             result.forEach(item => item.time = (new Date(item.time).toLocaleString()))
             res.send(result)
         })
+})
+
+//todo 重启录制进程
+app.get("/restartRecording", function (req, res) {
+    if(proc == null){
+        res.send("当前未开播")
+    }else{
+        stopRecord()
+    }
+    
+})
+
+//todo 查看日志
+app.get("/viewLogs", function (req, res) {
+    res.send("OK")
 })
 
 var port = 8081
