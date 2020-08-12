@@ -13,6 +13,10 @@ let timeoutId = null;
 let isLive;
 danmuClient.on('message', msg => {
     switch (msg.type) {
+        // case 'online':
+        //     //用来检测是否真的连接到上弹幕服务器
+        //     console.log(`[当前人气]:${msg.count}`)
+        //     break
         case 'beginLive':
             logger.info("收到上播消息：", JSON.stringify(msg))
             //开始直播
