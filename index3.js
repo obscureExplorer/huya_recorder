@@ -2,6 +2,8 @@ const { spawn } = require("child_process")
 const { exec } = require("child_process")
 const huya_danmu = require('../huya-danmu/index')
 const request = require('request-promise')
+const myArgs = process.argv.slice(2);
+const globalRoomId = myArgs[0];
 
 var log4js = require("log4js");
 var logger = log4js.getLogger();
@@ -19,7 +21,7 @@ const r = request.defaults({ json: true, gzip: true, headers: { 'User-Agent': 'M
 //判断当前开播状态
 async function isLiveOrNot(){
     let body = await r({
-        url: `https://www.huya.com/lovetuleisi`,
+        url: `https://www.huya.com/` + globalRoomId,
         agent: this._agent
     })
     let roomData = JSON.parse(body.match(/var TT_ROOM_DATA =(.*?);var TT_.{0,18}=/)[1])
@@ -36,7 +38,7 @@ async function isLiveOrNot(){
                 return;
             }
             if((/^.+\n$/.test(stdout))){
-                startRecord("lovetuleisi")
+                startRecord(globalRoomId)
             }
         });
     }else{
@@ -47,7 +49,7 @@ isLiveOrNot()
 
 //调用java程序进行录制
 function startRecord(roomId) {
-    proc = spawn("java", ["-Dfile.encoding=utf-8", "-jar", "BiliLiveRecorder.jar", "debug=false&check=false&delete=false&liver=huya&id=" + roomId + "&retry=3&qn=-1&qnPri=蓝光4M>超清>高清>流畅"], { cwd: '/home/ubuntu' })
+    proc = spawn("java", ["-Dfile.encoding=utf-8", "-jar", "BiliLiveRecorder.jar", "debug=false&check=false&delete=false&liver=huya&id=" + roomId + "&retry=0&qn=-1&qnPri=蓝光4M>超清>高清>流畅"], { cwd: 'C:\\Users\\woxia\\Documents' })
     proc.stdout.on("data", data => {
         output += data
     })
@@ -62,36 +64,29 @@ function startRecord(roomId) {
 
     proc.on("exit", () => {
         proc = null
-        //还在直播且不是因为主动终止，说明是因为异常退出的，要继续录制
+        //还在直播且不是因为主动终止，说明是因为异常退出的，要重新录制
         if(isLive && !earlyTerminated){
             startRecord(roomId)
         }
     })
 }
-
-const danmuClient = new huya_danmu("lovetuleisi")
+var fs=require('fs')
+const danmuClient = new huya_danmu(globalRoomId)
 //初始化弹幕模块，用来监听是否开播和下播
 danmuClient.on('message', msg => {
-    switch (msg.type) {
+    switch (msg. type) {
         case 'beginLive':
             //开始直播
             logger.info(JSON.stringify(msg))
             output = "";
             if (!isLive) {
                 isLive = true;
-                exec("jps", (error, stdout, stderr) => {
-                    if (error) {
-                        logger.info(`error: ${error.message}`);
-                        return;
+                fs.writeFile(require("path").join(require('os').homedir(),"1.json"), JSON.stringify(msg) ,(err)=>{
+                    if(err){
+                        logger.error(err)
                     }
-                    if (stderr) {
-                        logger.info(`stderr: ${stderr}`);
-                        return;
-                    }
-                    if((/^.+\n$/.test(stdout))){
-                        startRecord("lovetuleisi")
-                    }
-                });
+                    startRecord(globalRoomId)
+                })
             }
             break
         case 'endLive':
@@ -102,7 +97,7 @@ danmuClient.on('message', msg => {
     }
 })
 danmuClient.on('connect', () => {
-    logger.info(`已连接huya lovetuleisi房间弹幕~`);
+    logger.info(`已连接huya ${globalRoomId}房间弹幕~`);
 })
 
 danmuClient.on('error', e => {
@@ -124,7 +119,7 @@ app.get("/start", function (req, res) {
     output = ""
     earlyTerminated = false
     let roomId = req.query.roomId;
-    startRecord(roomId == null || roomId == undefined ? "lovetuleisi" : roomId)
+    startRecord(roomId == null || roomId == undefined ? globalRoomId : roomId)
 
     res.send("OK,pid is " + proc.pid)
 })
@@ -179,7 +174,7 @@ app.get("/getLatestChatInfos", function (req, res) {
         res.send("Not ready yet")
         return;
     }
-    huyaDB.collection("lovetuleisi").find({}, { projection: { 'from.name': 1,'name' : 1 ,'type': 1, 'content': 1, 'time': 1 } }).sort({ time: -1 }).limit(10)
+    huyaDB.collection(globalRoomId).find({}, { projection: { 'from.name': 1,'name' : 1 ,'type': 1, 'content': 1, 'time': 1 } }).sort({ time: -1 }).limit(10)
         .toArray(function (err, result) {
             result.forEach(item => item.time = (new Date(item.time).toLocaleString()))
             res.send(result)
