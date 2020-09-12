@@ -49,7 +49,7 @@ isLiveOrNot()
 
 //调用java程序进行录制
 function startRecord(roomId) {
-    proc = spawn("java", ["-Dfile.encoding=utf-8", "-jar", "BiliLiveRecorder.jar", "debug=false&check=false&delete=false&liver=huya&id=" + roomId + "&retry=0&qn=-1&qnPri=蓝光4M>超清>高清>流畅"], { cwd: 'C:\\Users\\woxia\\Documents' })
+    proc = spawn("java", ["-Dfile.encoding=utf-8", "-jar", "BiliLiveRecorder-ffmpeg.jar", "debug=false&check=false&delete=false&liver=huya&id=" + roomId + "&retry=0&qn=-1&qnPri=蓝光4M>超清>高清>流畅"], { cwd: 'C:\\Users\\woxia\\Documents' })
     proc.stdout.on("data", data => {
         output += data
     })
@@ -181,6 +181,19 @@ app.get("/getLatestChatInfos", function (req, res) {
         })
 })
 
+app.get("/restart", function (req, res) {
+    if (!proc) {
+        res.send("Process is not running right now.")
+        return;
+    }
+    //Since SIGNAL is not supported, the following line is commented.
+    //proc.kill("SIGTERM");
+    proc.stdin.setEncoding('utf-8')
+    proc.stdin.write("stop")
+    proc.stdin.end()
+    proc = null
+    res.send("OK")
+})
 
 var port = 8081
 var server = app.listen(port)
