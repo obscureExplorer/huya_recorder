@@ -49,7 +49,7 @@ isLiveOrNot()
 
 //调用java程序进行录制
 function startRecord(roomId) {
-    proc = spawn("java", ["-Dfile.encoding=utf-8", "-jar", "BiliLiveRecorder-ffmpeg.jar", "debug=false&check=false&delete=false&liver=huya&id=" + roomId + "&retry=0&qn=-1&qnPri=蓝光4M>超清>高清>流畅"], { cwd: 'C:\\Users\\woxia\\Documents' })
+    proc = spawn("java", ["-Dfile.encoding=utf-8", "-jar", "BiliLiveRecorder-ffmpeg.jar", "debug=false&check=false&delete=false&liver=huya&id=" + roomId + "&retry=0&qn=-1&qnPri=蓝光4M>超清>高清>流畅"], { cwd: 'C:\\Users\\woxia' })
     proc.stdout.on("data", data => {
         output += data
     })
@@ -76,12 +76,14 @@ const danmuClient = new huya_danmu(globalRoomId)
 danmuClient.on('message', msg => {
     switch (msg. type) {
         case 'beginLive':
+            const json = JSON.stringify(msg);
             //开始直播
-            logger.info(JSON.stringify(msg))
+            logger.info(json)
             output = "";
-            if (!isLive) {
+
+            if (!isLive && json.indexOf('"sCdnType":"TX"') > -1) {
                 isLive = true;
-                fs.writeFile(require("path").join(require('os').homedir(),"1.json"), JSON.stringify(msg) ,(err)=>{
+                fs.writeFile(require("path").join(require('os').homedir(),"1.json"), json ,(err)=>{
                     if(err){
                         logger.error(err)
                     }
