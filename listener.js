@@ -33,7 +33,7 @@ danmuClient.on('message', msg => {
             isLive = false;
             timeoutId = setTimeout(function () {
                 logger.info("开始下载视频文件")
-                var proc = spawn("wsl", ["noglob", "rsync", "-avP", "ubuntu@193.112.25.159:/home/ubuntu/download/*", "/mnt/c/Users/woxia/Documents"]);
+                var proc = spawn("wsl", ["noglob", "rsync", "-av", "--partial"  ,"ubuntu@193.112.25.159:/home/ubuntu/download/*", "/mnt/c/Users/woxia/Documents"]);
                 proc.stdout.on("data", data => {
                     logger.info(`stout: ${iconv.decode(data,'utf-8')}`);
                 })
@@ -47,42 +47,21 @@ danmuClient.on('message', msg => {
                 })
 
                 proc.on("exit", () => {
-                    logger.info("rsync退出")
+                    logger.info("rsync退出。开始转换视频文件")
+                    //转换视频
+                    result = spawnSync("python", ["C:\\Users\\woxia\\PycharmProjects\\convert_video\\convert_video.py", "C:\\Users\\woxia\\documents"])
+                    logger.info(`stderr: ${iconv.decode(result.stderr,'gbk')}`);
+                    logger.info(`stdout: ${iconv.decode(result.stdout,'gbk')}`);
 
-
-                    exec("python C:\\Users\\woxia\\PycharmProjects\\convert_video\\convert_video.py C:\\Users\\woxia\\documents",{encoding : 'gbk'} ,(error, stdout, stderr) => {
-                        if (error) {
-                            logger.error(`error: ${error.message}`);
-                        }
-                        if (stderr) {
-                            //todo 无效！
-                            logger.info(`stderr: ${stderr}`);
-                        }
-                        if (stdout) {
-                            //todo 无效！
-                            logger.info(`stdout: ${stdout}`);
-                        }
-
-                        exec("python C:\\Users\\woxia\\PycharmProjects\\upload_to_bilibili\\upload_to_bilibili.py", (error2, stdout2, stderr2) => {
-                            if (error2) {
-                                logger.error(`error: ${error2.message}`);
-                            }
-                            if (stderr2) {
-                                //todo 无效！
-                                logger.info(`stderr: ${iconv.decode(stderr2,'gbk')}`);
-                            }
-                            if (stdout2) {
-                                //todo 无效！
-                                logger.info(`stdout: ${iconv.decode(stdout2,'gbk')}`);
-                            }
-
-                        })
-
-                    })
+                    logger.info("开始上传到b站")
+                    //上传到b站
+                    result = spawnSync("python", ["C:\\Users\\woxia\\PycharmProjects\\upload_to_bilibili\\upload_to_bilibili.py"])
+                    logger.info(`stderr: ${iconv.decode(result.stderr,'gbk')}`);
+                    logger.info(`stdout: ${iconv.decode(result.stdout,'gbk')}`);
+                    logger.info("上传完毕")
 
                 })
-            //临时改为5分钟，以后改成15分钟
-            }, 1000 * 60 * 5)
+            }, 1000 * 60 * 10)
             break;
     }
 })
