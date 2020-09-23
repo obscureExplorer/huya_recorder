@@ -73,6 +73,7 @@ function startRecord(roomId) {
 var fs=require('fs')
 const danmuClient = new huya_danmu(globalRoomId)
 //初始化弹幕模块，用来监听是否开播和下播
+let lastTime = 0;
 danmuClient.on('message', msg => {
     switch (msg. type) {
         case 'beginLive':
@@ -80,9 +81,12 @@ danmuClient.on('message', msg => {
             //开始直播
             logger.info(json)
             output = "";
+            isLive = true;
 
-            if (!isLive && json.indexOf('"sCdnType":"TX"') > -1) {
-                isLive = true;
+            let currentTime =  new Date();
+            let diff = currentTime- lastTime;
+            //差值大于3秒，说明是重新开播了，否则只是在更新线路信息.(因为线路更新的消息间隔很短)
+            if (diff > 3000) {
                 fs.writeFile(require("path").join(require('os').homedir(),"1.json"), json ,(err)=>{
                     if(err){
                         logger.error(err)
@@ -90,11 +94,19 @@ danmuClient.on('message', msg => {
                     startRecord(globalRoomId)
                 })
             }
+            lastTime = currentTime;
             break
         case 'endLive':
             //结束直播
             logger.info(JSON.stringify(msg))
             isLive = false;
+            break;
+        case 'livingInfo':
+            // //当前正在直播
+            // logger.info(JSON.stringify(msg))
+            // if(info.bIsLiving == 1){
+            //     //todo
+            // }
             break;
     }
 })
