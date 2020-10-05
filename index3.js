@@ -9,6 +9,11 @@ const globalRoomId = myArgs[0];
 var log4js = require("log4js");
 var logger = log4js.getLogger();
 logger.level = "info";
+log4js.configure({
+    appenders: { output: { type: "file", filename: "output.log", maxLogSize: 10 * 1024 * 1024 } },
+    categories: { default: { appenders: ["output"], level: "info" } }
+});
+
 
 var express = require('express')
 var app = express()
@@ -23,7 +28,7 @@ const danmuClient = new huya_danmu(globalRoomId)
 //调用ffmpeg进行录制
 function startRecord(msg) {
     let liveInfo = msg.tNotice;
-    //生成文件名
+    //生成u输出文件名
     let outputFileName = liveInfo.sNick + '-' + liveInfo.iRoomId + "的huya直播" + format.asString('yyyy-MM-dd_hh.mm.ss') + ".ts";
     let line = liveInfo.vStreamInfo.value[0];
     let liveUrl = line.sFlvUrl + "/" + line.sStreamName + "." + line.sFlvUrlSuffix + "?" + line.sFlvAntiCode
@@ -89,7 +94,7 @@ danmuClient.on('connect', () => {
 })
 
 danmuClient.on('error', e => {
-    logger.info(e)
+    logger.error(e)
 })
 
 danmuClient.on('close', () => {
