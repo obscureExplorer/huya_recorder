@@ -1,7 +1,8 @@
 const { spawn } = require("child_process")
 const { exec } = require("child_process")
 const huya_danmu = require('../huya-danmu/index')
-const request = require('request-promise')
+var format = require('date-format');
+
 const myArgs = process.argv.slice(2);
 const globalRoomId = myArgs[0];
 
@@ -15,41 +16,19 @@ var app = express()
 let isLive = false;
 let output = ""
 var proc = null
-let earlyTerminated = false;
+let terminateManually = false;
 
-const r = request.defaults({ json: true, gzip: true, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36' } })
-//判断当前开播状态
-async function isLiveOrNot(){
-    let body = await r({
-        url: `https://www.huya.com/` + globalRoomId,
-        agent: this._agent
-    })
-    let roomData = JSON.parse(body.match(/var TT_ROOM_DATA =(.*?);var TT_.{0,18}=/)[1])
-    if(roomData.state === 'ON'){
-        isLive = true;
-        //判断当前是否在录制
-        exec("jps", (error, stdout, stderr) => {
-            if (error) {
-                logger.info(`error: ${error.message}`);
-                return;
-            }
-            if (stderr) {
-                logger.info(`stderr: ${stderr}`);
-                return;
-            }
-            if((/^.+\n$/.test(stdout))){
-                startRecord(globalRoomId)
-            }
-        });
-    }else{
-        isLive = false;
-    }
-}
-isLiveOrNot()
+const danmuClient = new huya_danmu(globalRoomId)
 
-//调用java程序进行录制
-function startRecord(roomId) {
-    proc = spawn("java", ["-Dfile.encoding=utf-8", "-jar", "BiliLiveRecorder-ffmpeg.jar", "debug=false&check=false&delete=false&liver=huya&id=" + roomId + "&retry=0&qn=-1&qnPri=蓝光4M>超清>高清>流畅"], { cwd: 'C:\\Users\\woxia' })
+//调用ffmpeg进行录制
+function startRecord(msg) {
+    let liveInfo = msg.tNotice;
+    //生成文件名
+    let outputFileName = liveInfo.sNick + '-' + liveInfo.iRoomId + "的huya直播" + format.asString('yyyy-MM-dd_hh.mm.ss') + ".ts";
+    let line = liveInfo.vStreamInfo.value[0];
+    let liveUrl = line.sFlvUrl + "/" + line.sStreamName + "." + line.sFlvUrlSuffix + "?" + line.sFlvAntiCode
+
+    proc = spawn("ffmpeg", ["-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36", "-i", liveUrl, "-c", "copy", outputFileName], { cwd: 'C:\\Users\\woxia\\download' })
     proc.stdout.on("data", data => {
         output += data
     })
@@ -65,53 +44,48 @@ function startRecord(roomId) {
     proc.on("exit", () => {
         proc = null
         //还在直播且不是因为主动终止，说明是因为异常退出的，要重新录制
-        if(isLive && !earlyTerminated){
-            startRecord(roomId)
+        if (isLive && !terminateManually) {
+            danmuClient.getLivingInfo(startRecord)
         }
     })
 }
-var fs=require('fs')
-const danmuClient = new huya_danmu(globalRoomId)
-//初始化弹幕模块，用来监听是否开播和下播
-let lastTime = 0;
-danmuClient.on('message', msg => {
-    switch (msg. type) {
-        case 'beginLive':
-            const json = JSON.stringify(msg);
-            //开始直播
-            logger.info(json)
-            output = "";
-            isLive = true;
 
-            let currentTime =  new Date();
-            let diff = currentTime- lastTime;
-            //差值大于3秒，说明是重新开播了，否则只是在更新线路信息.(因为线路更新的消息间隔很短)
-            if (diff > 3000) {
-                fs.writeFile(require("path").join(require('os').homedir(),"1.json"), json ,(err)=>{
-                    if(err){
-                        logger.error(err)
-                    }
-                    startRecord(globalRoomId)
-                })
+//初始化弹幕模块，用来监听是否开播和下播
+let liveId = -1;
+danmuClient.on('message', msg => {
+    var json;
+    switch (msg.type) {
+        case 'beginLive':
+            json = JSON.stringify(msg);
+            logger.info(json);
+            //收到上播消息
+            //判断是开始直播还是更新线路信息
+            if (liveId != msg.lLiveId) {
+                output = "";
+                isLive = true;
+                startRecord(globalRoomId, msg)
+                liveId = msg.lLiveId
             }
-            lastTime = currentTime;
             break
         case 'endLive':
-            //结束直播
-            logger.info(JSON.stringify(msg))
+            //收到下播消息
+            json = JSON.stringify(msg);
+            logger.info(json)
+
             isLive = false;
-            break;
-        case 'livingInfo':
-            // //当前正在直播
-            // logger.info(JSON.stringify(msg))
-            // if(info.bIsLiving == 1){
-            //     //todo
-            // }
+            liveId = -1;
             break;
     }
 })
 danmuClient.on('connect', () => {
     logger.info(`已连接huya ${globalRoomId}房间弹幕~`);
+
+    //判断连接弹幕服务器时，主播是否正在直播。如果是，则马上开启录制。
+    danmuClient.getLivingInfo(function (msg) {
+        isLive = msg.bIsLiving == 1 ? true : false;
+        if (isLive)
+            startRecord(msg);
+    })
 })
 
 danmuClient.on('error', e => {
@@ -131,11 +105,9 @@ app.get("/start", function (req, res) {
         return;
     }
     output = ""
-    earlyTerminated = false
-    let roomId = req.query.roomId;
-    startRecord(roomId == null || roomId == undefined ? globalRoomId : roomId)
-
-    res.send("OK,pid is " + proc.pid)
+    terminateManually = false
+    danmuClient.getLivingInfo(startRecord);
+    res.send("OK")
 })
 //查看磁盘用量
 app.get("/disk_usage", function (req, res) {
@@ -162,11 +134,9 @@ app.get("/stop", function (req, res) {
         res.send("Process is not running right now.")
         return;
     }
-    earlyTerminated = true;
-    //Since SIGNAL is not supported, the following line is commented.
-    //proc.kill("SIGTERM");
+    terminateManually = true;
     proc.stdin.setEncoding('utf-8')
-    proc.stdin.write("stop")
+    proc.stdin.write("q")
     proc.stdin.end()
     proc = null
     res.send("OK")
@@ -188,7 +158,7 @@ app.get("/getLatestChatInfos", function (req, res) {
         res.send("Not ready yet")
         return;
     }
-    huyaDB.collection(globalRoomId).find({}, { projection: { 'from.name': 1,'name' : 1 ,'type': 1, 'content': 1, 'time': 1 } }).sort({ time: -1 }).limit(10)
+    huyaDB.collection(globalRoomId).find({}, { projection: { 'from.name': 1, 'name': 1, 'type': 1, 'content': 1, 'time': 1 } }).sort({ time: -1 }).limit(10)
         .toArray(function (err, result) {
             result.forEach(item => item.time = (new Date(item.time).toLocaleString()))
             res.send(result)
@@ -200,10 +170,8 @@ app.get("/restart", function (req, res) {
         res.send("Process is not running right now.")
         return;
     }
-    //Since SIGNAL is not supported, the following line is commented.
-    //proc.kill("SIGTERM");
     proc.stdin.setEncoding('utf-8')
-    proc.stdin.write("stop")
+    proc.stdin.write("q")
     proc.stdin.end()
     proc = null
     res.send("OK")
