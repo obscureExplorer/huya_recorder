@@ -14,7 +14,6 @@ log4js.configure({
     categories: { default: { appenders: ["output"], level: "info" } }
 });
 
-
 var express = require('express')
 var app = express()
 
@@ -22,13 +21,14 @@ let isLive = false;
 let output = ""
 var proc = null
 let terminateManually = false;
+let liveId = -1;
 
 const danmuClient = new huya_danmu(globalRoomId)
 
 //调用ffmpeg进行录制
 function startRecord(msg) {
     let liveInfo = msg.tNotice;
-    //生成u输出文件名
+    //生成输出文件名
     let outputFileName = liveInfo.sNick + '-' + liveInfo.iRoomId + "的huya直播" + format.asString('yyyy-MM-dd_hh.mm.ss') + ".ts";
     let line = liveInfo.vStreamInfo.value[0];
     let liveUrl = line.sFlvUrl + "/" + line.sStreamName + "." + line.sFlvUrlSuffix + "?" + line.sFlvAntiCode
@@ -56,7 +56,6 @@ function startRecord(msg) {
 }
 
 //初始化弹幕模块，用来监听是否开播和下播
-let liveId = -1;
 danmuClient.on('message', msg => {
     var json;
     switch (msg.type) {
