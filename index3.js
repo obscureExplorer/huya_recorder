@@ -5,6 +5,7 @@ var format = require('date-format');
 
 const myArgs = process.argv.slice(2);
 const globalRoomId = myArgs[0];
+const donwlodDir = myArgs[1];
 
 var log4js = require("log4js");
 var logger = log4js.getLogger();
@@ -33,7 +34,7 @@ function startRecord(msg) {
     let line = liveInfo.vStreamInfo.value[0];
     let liveUrl = line.sFlvUrl + "/" + line.sStreamName + "." + line.sFlvUrlSuffix + "?" + line.sFlvAntiCode
 
-    proc = spawn("ffmpeg", ["-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36", "-i", liveUrl, "-c", "copy", outputFileName], { cwd: 'C:\\Users\\woxia\\download' })
+    proc = spawn("ffmpeg", ["-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36", "-i", liveUrl, "-c", "copy", outputFileName], { cwd: donwlodDir })
     proc.stdout.on("data", data => {
         output += data
     })
