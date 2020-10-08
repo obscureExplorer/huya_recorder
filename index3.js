@@ -68,7 +68,7 @@ danmuClient.on('message', msg => {
             if (liveId != msg.lLiveId) {
                 output = "";
                 isLive = true;
-                startRecord(globalRoomId, msg)
+                startRecord(msg)
                 liveId = msg.lLiveId
             }
             break
