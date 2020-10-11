@@ -4,7 +4,7 @@ const huya_danmu = require('../huya-danmu/index')
 var format = require('date-format');
 
 const myArgs = process.argv.slice(2);
-const globalRoomId = myArgs[0];
+const defaultRoomId = myArgs[0];
 const donwlodDir = myArgs[1];
 
 var log4js = require("log4js");
@@ -24,7 +24,7 @@ var proc = null
 let terminateManually = false;
 let liveId = -1;
 
-const danmuClient = new huya_danmu(globalRoomId)
+const danmuClient = new huya_danmu(defaultRoomId)
 
 //调用ffmpeg进行录制
 function startRecord(msg) {
@@ -83,7 +83,7 @@ danmuClient.on('message', msg => {
     }
 })
 danmuClient.on('connect', () => {
-    logger.info(`已连接huya ${globalRoomId}房间弹幕~`);
+    logger.info(`已连接huya ${defaultRoomId}房间弹幕~`);
 
     //判断连接弹幕服务器时，主播是否正在直播。如果是，则马上开启录制。
     danmuClient.getLivingInfo(function (msg) {
@@ -95,6 +95,9 @@ danmuClient.on('connect', () => {
 
 danmuClient.on('error', e => {
     logger.error(e)
+    if(e.message == 'Fail to get info'){
+        danmuClient.start()
+    }
 })
 
 danmuClient.on('close', () => {
@@ -163,7 +166,7 @@ app.get("/getLatestChatInfos", function (req, res) {
         res.send("Not ready yet")
         return;
     }
-    huyaDB.collection(globalRoomId).find({}, { projection: { 'from.name': 1, 'name': 1, 'type': 1, 'content': 1, 'time': 1 } }).sort({ time: -1 }).limit(10)
+    huyaDB.collection(defaultRoomId).find({}, { projection: { 'from.name': 1, 'name': 1, 'type': 1, 'content': 1, 'time': 1 } }).sort({ time: -1 }).limit(10)
         .toArray(function (err, result) {
             result.forEach(item => item.time = (new Date(item.time).toLocaleString()))
             res.send(result)
