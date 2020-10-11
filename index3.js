@@ -95,7 +95,7 @@ danmuClient.on('connect', () => {
 
 danmuClient.on('error', e => {
     logger.error(e)
-    if(e.message == 'Fail to get info'){
+    if (e.message == 'Fail to get info') {
         danmuClient.start()
     }
 })
@@ -155,7 +155,10 @@ const url = 'mongodb://localhost:27017';
 
 let huyaDB = null;
 mongoClient.connect(url, function (err, dbClient) {
-    if (err) throw err;
+    if (err) {
+        logger.error(err)
+        return;
+    }
     logger.info("Connected to MongoDB");
     huyaDB = dbClient.db("huya");
 });
