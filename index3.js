@@ -11,7 +11,7 @@ var log4js = require("log4js");
 var logger = log4js.getLogger();
 logger.level = "info";
 log4js.configure({
-    appenders: { output: { type: "file", filename: "output.log", maxLogSize: 10 * 1024 * 1024 } },
+    appenders: { output: { type: "file", filename: defaultRoomId + "_output.log", maxLogSize: 10 * 1024 * 1024 } },
     categories: { default: { appenders: ["output"], level: "info" } }
 });
 
@@ -189,5 +189,16 @@ app.get("/restart", function (req, res) {
 })
 
 var port = 8081
-var server = app.listen(port)
-logger.info('Server listened on: ' + port)
+var server = app.listen(port, function () {
+    logger.info('Server listened on: ' + port)
+})
+
+server.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+        console.log('Address in use, retrying...');
+        port++;
+        server.close();
+        server.listen(port)
+    }
+});
+
