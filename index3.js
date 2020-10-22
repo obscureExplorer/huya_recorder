@@ -28,9 +28,17 @@ const danmuClient = new huya_danmu(defaultRoomId)
 
 //调用ffmpeg进行录制
 function startRecord(msg) {
-    let liveInfo = msg.tNotice;
+    let liveInfo;
+    if (msg.tNotice) {
+        liveInfo = msg.tNotice;
+    } else if (msg.info) {
+        liveInfo = msg.info;
+    } else {
+        logger.error("Unknown message:", msg);
+        throw new Error("Unknown message")
+    }
     //生成输出文件名
-    let outputFileName = liveInfo.sNick + '-' + liveInfo.iRoomId + "的huya直播" + format.asString('yyyy-MM-dd_hh.mm.ss') + ".ts";
+    let outputFileName = liveInfo.sNick + '-' + liveInfo.iRoomId + "的huya直播" + format.asString('yyyy-MM-dd_hh.mm.ss') + ".flv";
     let line = liveInfo.vStreamInfo.value[0];
     let liveUrl = line.sFlvUrl + "/" + line.sStreamName + "." + line.sFlvUrlSuffix + "?" + line.sFlvAntiCode
 
@@ -65,10 +73,10 @@ danmuClient.on('message', msg => {
             logger.info(json);
             //收到上播消息
             //判断是开始直播还是更新线路信息
-            if (liveId != msg.lLiveId) {
+            if ( liveId != msg.lLiveId )  {
                 output = "";
                 isLive = true;
-                startRecord(msg.info)
+                startRecord(msg)
                 liveId = msg.lLiveId
             }
             break
@@ -94,7 +102,7 @@ danmuClient.on('connect', () => {
 })
 
 danmuClient.on('error', e => {
-    logger.error(e)
+    logger.error("Some error occurred", e)
     if (e.message == 'Fail to get info') {
         danmuClient.start()
     }
