@@ -40,6 +40,10 @@ function startRecord(msg) {
     //生成输出文件名
     let outputFileName = liveInfo.sNick + '-' + liveInfo.iRoomId + "的huya直播" + format.asString('yyyy-MM-dd_hh.mm.ss') + ".flv";
     let line = liveInfo.vStreamInfo.value[0];
+    if (line == undefined && isLive && !terminateManually) {
+        danmuClient.getLivingInfo(startRecord)
+        return
+    }
     let liveUrl = line.sFlvUrl + "/" + line.sStreamName + "." + line.sFlvUrlSuffix + "?" + line.sFlvAntiCode
 
     proc = spawn("ffmpeg", ["-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36", "-i", liveUrl, "-c", "copy", outputFileName], { cwd: donwlodDir })
