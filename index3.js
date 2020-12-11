@@ -1,11 +1,24 @@
 const { spawn } = require("child_process")
 const { exec } = require("child_process")
+const argsObj = require('command-line-parser')();
+const path = require('path')
+const os = require('os')
 const huya_danmu = require('../huya-danmu/index')
 var format = require('date-format');
 
-const myArgs = process.argv.slice(2);
-const defaultRoomId = myArgs[0];
-const donwlodDir = myArgs[1];
+const defaultRoomId = argsObj._args[0];
+let downloadDir;
+if (!argsObj.downloadDir) {
+    var fs = require('fs');
+    var dir = path.join(os.homedir(),'download');
+
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir);
+    }
+    downloadDir = dir;
+} else {
+    downloadDir = argsObj.downloadDir
+}
 
 var log4js = require("log4js");
 var logger = log4js.getLogger();
@@ -44,9 +57,15 @@ function startRecord(msg) {
         danmuClient.getLivingInfo(startRecord)
         return
     }
+    for(var cdn of liveInfo.vStreamInfo.value){
+        if(cdn.sCdnType == 'TX'){
+            line = cdn;
+            break;
+        }
+    }
     let liveUrl = line.sFlvUrl + "/" + line.sStreamName + "." + line.sFlvUrlSuffix + "?" + line.sFlvAntiCode
 
-    proc = spawn("ffmpeg", ["-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36", "-i", liveUrl, "-c", "copy", outputFileName], { cwd: donwlodDir })
+    proc = spawn("ffmpeg", ["-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36", "-i", liveUrl, "-c", "copy", outputFileName], { cwd: downloadDir })
     proc.stdout.on("data", data => {
         output += data
     })
