@@ -4,13 +4,13 @@ const argsObj = require('command-line-parser')();
 const path = require('path')
 const os = require('os')
 const huya_danmu = require('../huya-danmu/index')
-var format = require('date-format');
+let format = require('date-format');
 
 const defaultRoomId = argsObj._args[0];
 let downloadDir;
 if (!argsObj.downloadDir) {
-    var fs = require('fs');
-    var dir = path.join(os.homedir(),'download');
+    let fs = require('fs');
+    let dir = path.join(os.homedir(),'download');
 
     if (!fs.existsSync(dir)){
         fs.mkdirSync(dir);
@@ -20,20 +20,20 @@ if (!argsObj.downloadDir) {
     downloadDir = argsObj.downloadDir
 }
 
-var log4js = require("log4js");
-var logger = log4js.getLogger();
+let log4js = require("log4js");
+let logger = log4js.getLogger();
 logger.level = "info";
 log4js.configure({
     appenders: { file: { type: "file", filename: defaultRoomId + "_output.log", maxLogSize: 10 * 1024 * 1024 }, console: { type: 'stdout' } },
-    categories: { default: { appenders: ["console", "file"], level: "info" } }
+    categories: { default: { appenders: ["console", "file"], level: "trace" } }
 });
 
-var express = require('express')
-var app = express()
+let express = require('express')
+let app = express()
 
 let isLive = false;
 let output = ""
-var proc = null
+let proc = null
 let terminateManually = false;
 let liveId = -1;
 
@@ -57,8 +57,8 @@ function startRecord(msg) {
         danmuClient.getLivingInfo(startRecord)
         return
     }
-    for(var cdn of liveInfo.vStreamInfo.value){
-        if(cdn.sCdnType == 'TX'){
+    for(let cdn of liveInfo.vStreamInfo.value){
+        if(cdn.sCdnType === 'TX'){
             line = cdn;
             break;
         }
@@ -89,14 +89,14 @@ function startRecord(msg) {
 
 //初始化弹幕模块，用来监听是否开播和下播
 danmuClient.on('message', msg => {
-    var json;
+    let json;
     switch (msg.type) {
         case 'beginLive':
             json = JSON.stringify(msg);
             logger.info(json);
             //收到上播消息
             //判断是开始直播还是更新线路信息
-            if ( liveId != msg.lLiveId )  {
+            if ( liveId !== msg.lLiveId )  {
                 output = "";
                 isLive = true;
                 startRecord(msg)
@@ -118,7 +118,7 @@ danmuClient.on('connect', () => {
 
     //判断连接弹幕服务器时，主播是否正在直播。如果是，则马上开启录制。
     danmuClient.getLivingInfo(function (msg) {
-        isLive = msg.bIsLiving == 1 ? true : false;
+        isLive = msg.bIsLiving === 1;
         if (isLive)
             startRecord(msg);
     })
@@ -126,9 +126,7 @@ danmuClient.on('connect', () => {
 
 danmuClient.on('error', e => {
     logger.error("Some error occurred", e)
-    if (e.message == 'Fail to get info') {
-        danmuClient.start()
-    }
+    danmuClient.start()
 })
 
 danmuClient.on('close', () => {
@@ -181,7 +179,7 @@ app.get("/stop", function (req, res) {
     res.send("OK")
 })
 
-var mongoClient = require("mongodb").MongoClient;
+let mongoClient = require("mongodb").MongoClient;
 const url = 'mongodb://localhost:27017';
 
 let huyaDB = null;
@@ -219,8 +217,8 @@ app.get("/restart", function (req, res) {
     res.send("OK")
 })
 
-var port = 8081
-var server = app.listen(port, function () {
+let port = 8081
+let server = app.listen(port, function () {
     logger.info('Server listened on: ' + port)
 })
 

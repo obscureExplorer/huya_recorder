@@ -5,9 +5,81 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "新版录制-兔蕾斯",
+            "program": "${workspaceFolder}/index3.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node",
+            "outputCapture": "std",
+            "args": [
+                "lovetuleisi"
+            ]
+        },
+        {
+            "name": "新版录制-小台",
+            "program": "${workspaceFolder}/index3.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node",
+            "outputCapture": "std",
+            "args": [
+                "23509143"
+            ]
+        },
+        {
+            "name": "新版录制-千允",
+            "program": "${workspaceFolder}/index3.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node",
+            "outputCapture": "std",
+            "args": [
+                "23218136"
+            ]
+        },
+        {
+            "name": "新版录制-任意",
+            "program": "${workspaceFolder}/index3.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node",
+            "outputCapture": "std",
+            "args": [
+                "56620"
+            ]
+        },
+        {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "下播后自动下载视频",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/listener.js",
+            "outputCapture": "std"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "下播后上传本地视频",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/listener_local.js",
+            "outputCapture": "std"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "旧版录制程序",
             "skipFiles": [
                 "<node_internals>/**"
             ],
